@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,27 +18,29 @@
 
 package org.apache.zookeeper.common;
 
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 
 /**
  * Implementation of {@link FileKeyStoreLoader} that loads from JKS files.
  */
 class JKSFileLoader extends StandardTypeFileKeyStoreLoader {
+    private JKSFileLoader(String keyStorePath,
+                          String trustStorePath,
+                          String keyStorePassword,
+                          String trustStorePassword) {
+        super(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword);
+    }
 
-    private JKSFileLoader(
-        String keyStorePath,
-        String trustStorePath,
-        String keyStorePassword,
-        String trustStorePassword) {
-        super(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword, SupportedStandardKeyFormat.JKS);
+    @Override
+    protected KeyStore keyStoreInstance() throws KeyStoreException {
+        return KeyStore.getInstance("JKS");
     }
 
     static class Builder extends FileKeyStoreLoader.Builder<JKSFileLoader> {
-
         @Override
         JKSFileLoader build() {
             return new JKSFileLoader(keyStorePath, trustStorePath, keyStorePassword, trustStorePassword);
         }
-
     }
-
 }

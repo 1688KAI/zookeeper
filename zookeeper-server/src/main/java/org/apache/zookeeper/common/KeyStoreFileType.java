@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,13 +20,10 @@ package org.apache.zookeeper.common;
 
 /**
  * This enum represents the file type of a KeyStore or TrustStore.
- * Currently, JKS (Java keystore), PEM, PKCS12, and BCFKS types are supported.
+ * Currently, JKS (Java keystore), PEM, and PKCS12 types are supported.
  */
 public enum KeyStoreFileType {
-    JKS(".jks"),
-    PEM(".pem"),
-    PKCS12(".p12"),
-    BCFKS(".bcfks");
+    JKS(".jks"), PEM(".pem"), PKCS12(".p12");
 
     private final String defaultFileExtension;
 
@@ -56,7 +53,7 @@ public enum KeyStoreFileType {
      * @return the KeyStoreFileType, or <code>null</code> if
      *         <code>propertyValue</code> is <code>null</code> or empty.
      * @throws IllegalArgumentException if <code>propertyValue</code> is not
-     *         one of "JKS", "PEM", "BCFKS", "PKCS12", or empty/null.
+     *         one of "JKS", "PEM", "PKCS12", or empty/null.
      */
     public static KeyStoreFileType fromPropertyValue(String propertyValue) {
         if (propertyValue == null || propertyValue.length() == 0) {
@@ -70,12 +67,11 @@ public enum KeyStoreFileType {
      * If the file name ends with ".jks", returns <code>StoreFileType.JKS</code>.
      * If the file name ends with ".pem", returns <code>StoreFileType.PEM</code>.
      * If the file name ends with ".p12", returns <code>StoreFileType.PKCS12</code>.
-     * If the file name ends with ".bckfs", returns <code>StoreFileType.BCKFS</code>.
      * Otherwise, throws an IllegalArgumentException.
      * @param filename the filename of the key store or trust store file.
      * @return a KeyStoreFileType.
      * @throws IllegalArgumentException if the filename does not end with
-     *         ".jks", ".pem", "p12" or "bcfks".
+     *         ".jks", ".pem", or "p12".
      */
     public static KeyStoreFileType fromFilename(String filename) {
         int i = filename.lastIndexOf('.');
@@ -87,7 +83,8 @@ public enum KeyStoreFileType {
                 }
             }
         }
-        throw new IllegalArgumentException("Unable to auto-detect store file type from file name: " + filename);
+        throw new IllegalArgumentException(
+                "Unable to auto-detect store file type from file name: " + filename);
     }
 
     /**
@@ -102,11 +99,12 @@ public enum KeyStoreFileType {
      *                 <code>propertyValue</code> is null or empty.
      * @return a KeyStoreFileType.
      * @throws IllegalArgumentException if <code>propertyValue</code> is not
-     *         one of "JKS", "PEM", "PKCS12", "BCFKS", or empty/null.
+     *         one of "JKS", "PEM", "PKCS12", or empty/null.
      * @throws IllegalArgumentException if <code>propertyValue</code>is empty
      *         or null and the type could not be determined from the file name.
      */
-    public static KeyStoreFileType fromPropertyValueOrFileName(String propertyValue, String filename) {
+    public static KeyStoreFileType fromPropertyValueOrFileName(String propertyValue,
+                                                               String filename) {
         KeyStoreFileType result = KeyStoreFileType.fromPropertyValue(propertyValue);
         if (result == null) {
             result = KeyStoreFileType.fromFilename(filename);

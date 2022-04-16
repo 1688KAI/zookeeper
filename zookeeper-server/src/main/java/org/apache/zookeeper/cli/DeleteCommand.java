@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,13 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.zookeeper.cli;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.*;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -43,7 +39,7 @@ public class DeleteCommand extends CliCommand {
 
     @Override
     public CliCommand parse(String[] cmdArgs) throws CliParseException {
-        DefaultParser parser = new DefaultParser();
+        Parser parser = new PosixParser();
         try {
             cl = parser.parse(options, cmdArgs);
         } catch (ParseException ex) {
@@ -53,7 +49,7 @@ public class DeleteCommand extends CliCommand {
         if (args.length < 2) {
             throw new CliParseException(getUsageStr());
         }
-
+        
         retainCompatibility(cmdArgs);
 
         return this;
@@ -62,8 +58,8 @@ public class DeleteCommand extends CliCommand {
     private void retainCompatibility(String[] cmdArgs) throws CliParseException {
         if (args.length > 2) {
             err.println("'delete path [version]' has been deprecated. "
-                        + "Please use 'delete [-v version] path' instead.");
-            DefaultParser parser = new DefaultParser();
+                    + "Please use 'delete [-v version] path' instead.");
+            Parser parser = new PosixParser();
             try {
                 cl = parser.parse(options, cmdArgs);
             } catch (ParseException ex) {
@@ -82,15 +78,14 @@ public class DeleteCommand extends CliCommand {
         } else {
             version = -1;
         }
-
+        
         try {
             zk.delete(path, version);
         } catch (IllegalArgumentException ex) {
             throw new MalformedPathException(ex.getMessage());
-        } catch (KeeperException | InterruptedException ex) {
+        } catch(KeeperException|InterruptedException ex) {
             throw new CliWrapperException(ex);
         }
         return false;
     }
-
 }

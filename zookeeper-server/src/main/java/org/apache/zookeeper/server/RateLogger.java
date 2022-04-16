@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,74 +18,45 @@
 
 package org.apache.zookeeper.server;
 
-import java.util.Objects;
 import org.apache.zookeeper.common.Time;
 import org.slf4j.Logger;
 
-/**
- * This logs the message once in the beginning and once every LOG_INTERVAL.
- */
 public class RateLogger {
-
-    private final long LOG_INTERVAL; // Duration is in ms
-
     public RateLogger(Logger log) {
-        this(log, 100);
-    }
-
-    public RateLogger(Logger log, long interval) {
         LOG = log;
-        LOG_INTERVAL = interval;
     }
 
     private final Logger LOG;
     private String msg = null;
     private long timestamp;
     private int count = 0;
-    private String value = null;
 
     public void flush() {
-        if (msg != null && count > 0) {
-            String log = "";
+        if (msg != null) {
             if (count > 1) {
-                log = "[" + count + " times] ";
+                LOG.warn("[" + count + " times] " + msg);
+            } else if (count == 1) {
+                LOG.warn(msg);
             }
-            log += "Message: " + msg;
-            if (value != null) {
-                log += " Last value:" + value;
-            }
-            LOG.warn(log);
         }
         msg = null;
-        value = null;
         count = 0;
     }
 
     public void rateLimitLog(String newMsg) {
-        rateLimitLog(newMsg, null);
-    }
-
-    /**
-     * In addition to the message, it also takes a value.
-     */
-    public void rateLimitLog(String newMsg, String newValue) {
         long now = Time.currentElapsedTime();
-        if (Objects.equals(newMsg, msg)) {
+        if (newMsg.equals(msg)) {
             ++count;
-            value = newValue;
-            if (now - timestamp >= LOG_INTERVAL) {
+            if (now - timestamp >= 100) {
                 flush();
                 msg = newMsg;
                 timestamp = now;
-                value = newValue;
             }
         } else {
             flush();
             msg = newMsg;
-            value = newValue;
             timestamp = now;
-            LOG.warn("Message:{} Value:{}", msg, value);
+            LOG.warn(msg);
         }
     }
-
 }

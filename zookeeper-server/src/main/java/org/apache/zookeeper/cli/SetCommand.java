@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.zookeeper.cli;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.*;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
@@ -46,7 +41,7 @@ public class SetCommand extends CliCommand {
 
     @Override
     public CliCommand parse(String[] cmdArgs) throws CliParseException {
-        DefaultParser parser = new DefaultParser();
+        Parser parser = new PosixParser();
         try {
             cl = parser.parse(options, cmdArgs);
         } catch (ParseException ex) {
@@ -63,7 +58,7 @@ public class SetCommand extends CliCommand {
     @Override
     public boolean exec() throws CliException {
         String path = args[1];
-        byte[] data = args[2].getBytes(UTF_8);
+        byte[] data = args[2].getBytes();
         int version;
         if (cl.hasOption("v")) {
             version = Integer.parseInt(cl.getOptionValue("v"));
@@ -78,10 +73,9 @@ public class SetCommand extends CliCommand {
             }
         } catch (IllegalArgumentException ex) {
             throw new MalformedPathException(ex.getMessage());
-        } catch (KeeperException | InterruptedException ex) {
+        } catch (KeeperException|InterruptedException ex) {
             throw new CliWrapperException(ex);
         }
         return false;
     }
-
 }

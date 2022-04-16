@@ -51,12 +51,12 @@ import org.apache.zookeeper.inspector.manager.Pair;
  */
 public class ZooInspectorConnectionPropertiesDialog extends JDialog {
 
-    private final Map<String, JComponent> components;
+    private final HashMap<String, JComponent> components;
 
     /**
      * @param lastConnectionProps
      *            - the last connection properties used. if this is the first
-     *            connection since starting the applications this will be the
+     *            conneciton since starting the applications this will be the
      *            default settings
      * @param connectionPropertiesTemplateAndLabels
      *            - the connection properties and labels to show in this dialog

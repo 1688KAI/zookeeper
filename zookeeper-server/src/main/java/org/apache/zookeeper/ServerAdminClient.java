@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,20 +18,19 @@
 
 package org.apache.zookeeper;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Public
 public class ServerAdminClient {
-
     private static final Logger LOG = LoggerFactory.getLogger(ServerAdminClient.class);
 
     public static void ruok(String host, int port) {
@@ -53,7 +52,7 @@ public class ServerAdminClient {
             byte[] resBytes = new byte[4];
 
             int rc = is.read(resBytes);
-            String retv = new String(resBytes, UTF_8);
+            String retv = new String(resBytes);
             System.out.println("rc=" + rc + " retv=" + retv);
         } catch (IOException e) {
             LOG.warn("Unexpected exception", e);
@@ -87,7 +86,7 @@ public class ServerAdminClient {
             byte[] resBytes = new byte[1024];
 
             int rc = is.read(resBytes);
-            String retv = new String(resBytes, UTF_8);
+            String retv = new String(resBytes);
             System.out.println("rc=" + rc + " retv=" + retv);
         } catch (IOException e) {
             LOG.warn("Unexpected exception", e);
@@ -121,7 +120,7 @@ public class ServerAdminClient {
             byte[] resBytes = new byte[1024];
 
             int rc = is.read(resBytes);
-            String retv = new String(resBytes, UTF_8);
+            String retv = new String(resBytes);
             System.out.println("rc=" + rc + " retv=" + retv);
         } catch (IOException e) {
             LOG.warn("Unexpected exception", e);
@@ -154,7 +153,7 @@ public class ServerAdminClient {
             byte[] resBytes = new byte[4];
 
             int rc = is.read(resBytes);
-            String retv = new String(resBytes, UTF_8);
+            String retv = new String(resBytes);
             System.out.println("rc=" + rc + " retv=" + retv);
         } catch (IOException e) {
             LOG.warn("Unexpected exception", e);
@@ -193,9 +192,9 @@ public class ServerAdminClient {
             int rc = is.read(resBytes);
             ByteBuffer res = ByteBuffer.wrap(resBytes);
             long retv = res.getLong();
-            System.out.println("rc=" + rc
-                               + " retv=0" + Long.toOctalString(retv)
-                               + " masks=0" + Long.toOctalString(traceMask));
+            System.out.println("rc=" + rc + " retv=0"
+                    + Long.toOctalString(retv) + " masks=0"
+                    + Long.toOctalString(traceMask));
             assert (retv == traceMask);
         } catch (IOException e) {
             LOG.warn("Unexpected exception", e);
@@ -232,7 +231,8 @@ public class ServerAdminClient {
             int rc = is.read(resBytes);
             ByteBuffer res = ByteBuffer.wrap(resBytes);
             long retv = res.getLong();
-            System.out.println("rc=" + rc + " retv=0" + Long.toOctalString(retv));
+            System.out.println("rc=" + rc + " retv=0"
+                    + Long.toOctalString(retv));
         } catch (IOException e) {
             LOG.warn("Unexpected exception", e);
         } finally {
@@ -247,8 +247,9 @@ public class ServerAdminClient {
     }
 
     private static void usage() {
-        System.out.println("usage: java [-cp CLASSPATH] org.apache.zookeeper.ServerAdminClient "
-                           + "host port op (ruok|stat|dump|kill|gettracemask|settracemask) [arguments]");
+        System.out
+                .println("usage: java [-cp CLASSPATH] org.apache.zookeeper.ServerAdminClient "
+                        + "host port op (ruok|stat|dump|kill|gettracemask|settracemask) [arguments]");
 
     }
 
@@ -276,5 +277,4 @@ public class ServerAdminClient {
             System.out.println("Unrecognized op: " + op);
         }
     }
-
 }

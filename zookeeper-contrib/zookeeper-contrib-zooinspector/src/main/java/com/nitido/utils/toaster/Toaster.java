@@ -18,6 +18,9 @@
  *
  * This is a simple example of utilization:
  *
+ * import com.nitido.utils.toaster.*;
+ * import javax.swing.*;
+ *
  * public class ToasterTest
  * {
  *
@@ -33,20 +36,10 @@
  */
 package com.nitido.utils.toaster;
 
+import java.awt.*;
 
-import javax.swing.BorderFactory;
-import javax.swing.Icon;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextArea;
-import javax.swing.JWindow;
-import javax.swing.border.EtchedBorder;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.GraphicsEnvironment;
-import java.awt.Insets;
-import java.awt.Rectangle;
+import javax.swing.*;
+import javax.swing.border.*;
 
 /**
  * Class to show tosters in multiplatform

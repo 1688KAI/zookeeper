@@ -1,5 +1,5 @@
 <!--
-Copyright 2002-2022 The Apache Software Foundation
+Copyright 2002-2004 The Apache Software Foundation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ review the linked document to enable support for remote management
 The class
 _org.apache.zookeeper.server.quorum.QuorumPeerMain_
 will start a JMX manageable ZooKeeper server. This class
-registers the proper MBeans during initialization to support JMX
+registers the proper MBeans during initalization to support JMX
 monitoring and management of the
 instance. See _bin/zkServer.sh_ for one
 example of starting ZooKeeper using QuorumPeerMain.
@@ -65,7 +65,7 @@ start _jconsole_, which typically resides in
 _JDK_HOME/bin/jconsole_
 
 When the "new connection" window is displayed either connect
-to local process (if jconsole started on the same host as Server) or
+to local process (if jconsole started on same host as Server) or
 use the remote process connection.
 
 By default the "overview" tab for the VM is displayed (this
@@ -77,17 +77,8 @@ on the left hand side. Expand this item and depending on how you've
 started the server you will be able to monitor and manage various
 service related features.
 
-#### Logback MBeans registration _(new in 3.8.0)_
-
-Logback is the default logging backend of ZooKeeper since version 3.8.0. 
-It can be configured to register JMX MBeans by adding `<jmxConfigurator />` to _logback.xml_. More
-information can be found on Logback's [website](https://logback.qos.ch/manual/jmxConfig.html).
-
-#### Log4j MBeans _(deprecated)_
-
 Also note that ZooKeeper will register log4j MBeans as
-well if log4j1 is configured as the logging backend of SLF4j. 
-In the same section along the left hand side you will see
+well. In the same section along the left hand side you will see
 "log4j". Expand that to manage log4j through JMX. Of particular
 interest is the ability to dynamically change the logging levels
 used by editing the appender and root thresholds. Log4j MBean
@@ -96,7 +87,7 @@ _-Dzookeeper.jmx.log4j.disable=true_ to the JVM
 when starting ZooKeeper. In addition, we can specify the name of
 the MBean with the _-Dzookeeper.jmx.log4j.mbean=log4j:hierarchy=default_
 option, in case we need to upgrade an integrated system
-using the old MBean name (`log4j:hierarchy = default`).
+using the old MBean name (`log4j:hiearchy = default`).
 
 <a name="ch_reference"></a>
 

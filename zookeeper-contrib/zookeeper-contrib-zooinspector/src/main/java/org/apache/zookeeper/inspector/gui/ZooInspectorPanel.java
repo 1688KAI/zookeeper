@@ -26,12 +26,16 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
+import javax.swing.JButton;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JToolBar;
 import javax.swing.SwingWorker;
 
+import org.apache.zookeeper.inspector.gui.actions.AddNodeAction;
+import org.apache.zookeeper.inspector.gui.actions.DeleteNodeAction;
 import org.apache.zookeeper.inspector.gui.nodeviewer.ZooInspectorNodeViewer;
 import org.apache.zookeeper.inspector.logger.LoggerFactory;
 import org.apache.zookeeper.inspector.manager.ZooInspectorManager;
@@ -41,14 +45,10 @@ import org.apache.zookeeper.inspector.manager.ZooInspectorManager;
  */
 public class ZooInspectorPanel extends JPanel implements
         NodeViewersChangeListener {
-
-    /** Control how fast the scroll bar in the tree view window moves */
-    private static final int TREE_SCROLL_UNIT_INCREMENT = 16;
-
     private final IconResource iconResource;
     private final Toolbar toolbar;
     private final ZooInspectorNodeViewersPanel nodeViewersPanel;
-    private final ZooInspectorTreeView treeViewer;
+    private final ZooInspectorTreeViewer treeViewer;
     private final ZooInspectorManager zooInspectorManager;
 
     private final List<NodeViewersChangeListener> listeners = new ArrayList<NodeViewersChangeListener>();
@@ -64,7 +64,7 @@ public class ZooInspectorPanel extends JPanel implements
         this.zooInspectorManager = zooInspectorManager;
         this.iconResource = iconResource;
         toolbar = new Toolbar(iconResource);
-        final List<ZooInspectorNodeViewer> nodeViewers = new ArrayList<ZooInspectorNodeViewer>();
+        final ArrayList<ZooInspectorNodeViewer> nodeViewers = new ArrayList<ZooInspectorNodeViewer>();
         try {
             List<String> defaultNodeViewersClassNames = this.zooInspectorManager
                     .getDefaultNodeViewerConfiguration();
@@ -81,10 +81,10 @@ public class ZooInspectorPanel extends JPanel implements
         }
         nodeViewersPanel = new ZooInspectorNodeViewersPanel(
                 zooInspectorManager, nodeViewers);
-        this.treeViewer = new ZooInspectorTreeView(zooInspectorManager, iconResource);
-        this.treeViewer.addNodeSelectionListener(this.nodeViewersPanel);
+        treeViewer = new ZooInspectorTreeViewer(zooInspectorManager,
+                nodeViewersPanel, iconResource);
         this.setLayout(new BorderLayout());
-
+        
         toolbar.addActionListener(Toolbar.Button.connect, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 ZooInspectorConnectionPropertiesDialog zicpd = new ZooInspectorConnectionPropertiesDialog(
@@ -101,20 +101,17 @@ public class ZooInspectorPanel extends JPanel implements
         });
         toolbar.addActionListener(Toolbar.Button.refresh, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                treeViewer.initialize();
+                treeViewer.refreshView();
             }
         });
-        toolbar.addActionListener(Toolbar.Button.addNode, new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                treeViewer.createNode();
-            }
-        });
-        toolbar.addActionListener(Toolbar.Button.deleteNode, new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                treeViewer.deleteNode();
-            }
-        });
+
+        toolbar.addActionListener(Toolbar.Button.addNode,
+                    new AddNodeAction(this, treeViewer, zooInspectorManager));
+        toolbar.addActionListener(Toolbar.Button.deleteNode,
+                    new DeleteNodeAction(this, treeViewer, zooInspectorManager));
+
         toolbar.addActionListener(Toolbar.Button.nodeViewers, new ActionListener() {
+
             public void actionPerformed(ActionEvent e) {
                 ZooInspectorNodeViewersDialog nvd = new ZooInspectorNodeViewersDialog(
                         JOptionPane.getRootFrame(), nodeViewers, listeners,
@@ -130,7 +127,6 @@ public class ZooInspectorPanel extends JPanel implements
             }
         });
         JScrollPane treeScroller = new JScrollPane(treeViewer);
-        treeScroller.getVerticalScrollBar().setUnitIncrement(TREE_SCROLL_UNIT_INCREMENT);
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT,
                 treeScroller, nodeViewersPanel);
         splitPane.setResizeWeight(0.25);
@@ -156,14 +152,20 @@ public class ZooInspectorPanel extends JPanel implements
             protected void done() {
                 try {
                     if (get()) {
-                        treeViewer.initialize();
+                        treeViewer.refreshView();
                         toolbar.toggleButtons(true);
                     } else {
                         JOptionPane.showMessageDialog(ZooInspectorPanel.this,
                                 "Unable to connect to zookeeper", "Error",
                                 JOptionPane.ERROR_MESSAGE);
                     }
-                } catch (InterruptedException | ExecutionException e) {
+                } catch (InterruptedException e) {
+                    LoggerFactory
+                            .getLogger()
+                            .error(
+                                    "Error occurred while connecting to ZooKeeper server",
+                                    e);
+                } catch (ExecutionException e) {
                     LoggerFactory
                             .getLogger()
                             .error(
@@ -176,6 +178,9 @@ public class ZooInspectorPanel extends JPanel implements
         worker.execute();
     }
 
+    /**
+	 * 
+	 */
     public void disconnect() {
         disconnect(false);
     }
@@ -197,10 +202,16 @@ public class ZooInspectorPanel extends JPanel implements
             protected void done() {
                 try {
                     if (get()) {
-                        treeViewer.clear();
+                        treeViewer.clearView();
                         toolbar.toggleButtons(false);
                     }
-                } catch (InterruptedException | ExecutionException e) {
+                } catch (InterruptedException e) {
+                    LoggerFactory
+                            .getLogger()
+                            .error(
+                                    "Error occurred while disconnecting from ZooKeeper server",
+                                    e);
+                } catch (ExecutionException e) {
                     LoggerFactory
                             .getLogger()
                             .error(

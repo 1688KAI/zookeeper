@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,28 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.zookeeper;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
+
 import org.apache.zookeeper.client.ZKClientConfig;
-import org.apache.zookeeper.common.ZKConfig;
 import org.apache.zookeeper.test.TestByteBufAllocator;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.apache.zookeeper.common.ZKConfig;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 public class ClientCnxnSocketTest {
-
-    @BeforeEach
+    @Before
     public void setUp() {
         ClientCnxnSocketNetty.setTestAllocator(TestByteBufAllocator.getInstance());
     }
 
-    @AfterEach
+    @After
     public void tearDown() {
         ClientCnxnSocketNetty.clearTestAllocator();
         TestByteBufAllocator.checkForLeaks();
@@ -64,30 +63,4 @@ public class ClientCnxnSocketTest {
 
     }
 
-    /*
-     * Tests readLength():
-     * 1. successfully read packet if length == jute.maxbuffer;
-     * 2. IOException is thrown if packet length is greater than jute.maxbuffer.
-     */
-    @Test
-    public void testIOExceptionIsThrownWhenPacketLenExceedsJuteMaxBuffer() throws IOException {
-        ClientCnxnSocket clientCnxnSocket = new ClientCnxnSocketNIO(new ZKClientConfig());
-
-        // Should successfully read packet length == jute.maxbuffer
-        int length = ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT;
-        clientCnxnSocket.incomingBuffer.putInt(length);
-        clientCnxnSocket.incomingBuffer.rewind();
-        clientCnxnSocket.readLength();
-
-        // Failed to read packet length > jute.maxbuffer
-        length = ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT + 1;
-        clientCnxnSocket.incomingBuffer.putInt(length);
-        clientCnxnSocket.incomingBuffer.rewind();
-        try {
-            clientCnxnSocket.readLength();
-            fail("IOException is expected.");
-        } catch (IOException e) {
-            assertEquals("Packet len " + length + " is out of range!", e.getMessage());
-        }
-    }
 }

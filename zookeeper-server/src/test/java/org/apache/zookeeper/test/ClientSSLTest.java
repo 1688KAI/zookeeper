@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,35 +19,28 @@
 /**
  *
  */
-
 package org.apache.zookeeper.test;
 
-import static org.hamcrest.CoreMatchers.startsWith;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.io.IOException;
-import java.nio.file.Path;
+
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.common.ClientX509Util;
-import org.apache.zookeeper.common.SecretUtilsTest;
 import org.apache.zookeeper.server.NettyServerCnxnFactory;
 import org.apache.zookeeper.server.ServerCnxnFactory;
-import org.apache.zookeeper.server.auth.ProviderRegistry;
 import org.apache.zookeeper.server.quorum.QuorumPeerTestBase;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 public class ClientSSLTest extends QuorumPeerTestBase {
 
     private ClientX509Util clientX509Util;
 
-    @BeforeEach
+    @Before
     public void setup() {
         System.setProperty(NettyServerCnxnFactory.PORT_UNIFICATION_KEY, Boolean.TRUE.toString());
         clientX509Util = new ClientX509Util();
@@ -61,7 +54,7 @@ public class ClientSSLTest extends QuorumPeerTestBase {
         System.setProperty(clientX509Util.getSslTruststorePasswdProperty(), "testpass");
     }
 
-    @AfterEach
+    @After
     public void teardown() {
         System.clearProperty(NettyServerCnxnFactory.PORT_UNIFICATION_KEY);
         System.clearProperty(ServerCnxnFactory.ZOOKEEPER_SERVER_CNXN_FACTORY);
@@ -69,10 +62,8 @@ public class ClientSSLTest extends QuorumPeerTestBase {
         System.clearProperty(ZKClientConfig.SECURE_CLIENT);
         System.clearProperty(clientX509Util.getSslKeystoreLocationProperty());
         System.clearProperty(clientX509Util.getSslKeystorePasswdProperty());
-        System.clearProperty(clientX509Util.getSslKeystorePasswdPathProperty());
         System.clearProperty(clientX509Util.getSslTruststoreLocationProperty());
         System.clearProperty(clientX509Util.getSslTruststorePasswdProperty());
-        System.clearProperty(clientX509Util.getSslTruststorePasswdPathProperty());
         clientX509Util.close();
     }
 
@@ -88,25 +79,13 @@ public class ClientSSLTest extends QuorumPeerTestBase {
         testClientServerSSL(false);
     }
 
-    @Test
-    public void testClientServerUnifiedPortWithCnxnClassName() throws Exception {
-        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET, "ClientCnxnSocketNIO");
-        testClientServerSSL(false);
-    }
-
-    @Test
-    public void testClientServerSSLWithCnxnClassName() throws Exception {
-        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET, "ClientCnxnSocketNetty");
-        testClientServerSSL(true);
-    }
-
     /**
-     * This test checks that client - server SSL works in cluster setup of ZK servers, which includes:
+     * This test checks that client <-> server SSL works in cluster setup of ZK servers, which includes:
      * 1. setting "secureClientPort" in "zoo.cfg" file.
      * 2. setting jvm flags for serverCnxn, keystore, truststore.
      * Finally, a zookeeper client should be able to connect to the secure port and
      * communicate with server via secure connection.
-     * <p>
+     * <p/>
      * Note that in this test a ZK server has two ports -- clientPort and secureClientPort.
      */
     @Test
@@ -114,31 +93,20 @@ public class ClientSSLTest extends QuorumPeerTestBase {
         testClientServerSSL(true);
     }
 
-    @Test
-    public void testClientServerSSL_withPasswordFromFile() throws Exception {
-        final Path secretFile = SecretUtilsTest.createSecretFile("testpass");
-
-        System.clearProperty(clientX509Util.getSslKeystorePasswdProperty());
-        System.setProperty(clientX509Util.getSslKeystorePasswdPathProperty(), secretFile.toString());
-
-        System.clearProperty(clientX509Util.getSslTruststorePasswdProperty());
-        System.setProperty(clientX509Util.getSslTruststorePasswdPathProperty(), secretFile.toString());
-
-        testClientServerSSL(true);
-    }
-
     public void testClientServerSSL(boolean useSecurePort) throws Exception {
         final int SERVER_COUNT = 3;
-        final int[] clientPorts = new int[SERVER_COUNT];
-        final Integer[] secureClientPorts = new Integer[SERVER_COUNT];
+        final int clientPorts[] = new int[SERVER_COUNT];
+        final Integer secureClientPorts[] = new Integer[SERVER_COUNT];
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < SERVER_COUNT; i++) {
             clientPorts[i] = PortAssignment.unique();
             secureClientPorts[i] = PortAssignment.unique();
-            String server = String.format("server.%d=127.0.0.1:%d:%d:participant;127.0.0.1:%d%n", i, PortAssignment.unique(), PortAssignment.unique(), clientPorts[i]);
+            String server = String.format("server.%d=127.0.0.1:%d:%d:participant;127.0.0.1:%d%n",
+                    i, PortAssignment.unique(), PortAssignment.unique(), clientPorts[i]);
             sb.append(server);
         }
         String quorumCfg = sb.toString();
+
 
         MainThread[] mt = new MainThread[SERVER_COUNT];
         for (int i = 0; i < SERVER_COUNT; i++) {
@@ -156,8 +124,8 @@ public class ClientSSLTest extends QuorumPeerTestBase {
 
         // Servers have been set up. Now go test if secure connection is successful.
         for (int i = 0; i < SERVER_COUNT; i++) {
-            assertTrue(ClientBase.waitForServerUp("127.0.0.1:" + clientPorts[i], TIMEOUT),
-                    "waiting for server " + i + " being up");
+            Assert.assertTrue("waiting for server " + i + " being up",
+                    ClientBase.waitForServerUp("127.0.0.1:" + clientPorts[i], TIMEOUT));
             final int port = useSecurePort ? secureClientPorts[i] : clientPorts[i];
             ZooKeeper zk = ClientBase.createZKClient("127.0.0.1:" + port, TIMEOUT);
             // Do a simple operation to make sure the connection is fine.
@@ -171,10 +139,11 @@ public class ClientSSLTest extends QuorumPeerTestBase {
         }
     }
 
+
     /**
      * Developers might use standalone mode (which is the default for one server).
      * This test checks SSL works in standalone mode of ZK server.
-     * <p>
+     * <p/>
      * Note that in this test the Zk server has only secureClientPort
      */
     @Test
@@ -188,28 +157,5 @@ public class ClientSSLTest extends QuorumPeerTestBase {
         zk.delete("/test", -1);
         zk.close();
         mt.shutdown();
-    }
-
-    @Test
-    public void testSecureStandaloneServerAuthFail() throws IOException {
-        try {
-            System.setProperty(ProviderRegistry.AUTHPROVIDER_PROPERTY_PREFIX + "authfail",
-                AuthFailX509AuthenticationProvider.class.getName());
-            System.setProperty(clientX509Util.getSslAuthProviderProperty(), "authfail");
-
-            Integer secureClientPort = PortAssignment.unique();
-            MainThread mt = new MainThread(MainThread.UNSET_MYID, "", secureClientPort, false);
-            mt.start();
-
-            AssertionError ex = assertThrows("Client should not able to connect when authentication fails", AssertionError.class,
-                () -> {
-                    ClientBase.createZKClient("localhost:" + secureClientPort, TIMEOUT, 3000);
-                });
-            assertThat("Exception message does not match (different exception caught?)",
-                ex.getMessage(), startsWith("ZooKeeper client can not connect to"));
-        } finally {
-            System.clearProperty(ProviderRegistry.AUTHPROVIDER_PROPERTY_PREFIX + "authfail");
-            System.clearProperty(clientX509Util.getSslAuthProviderProperty());
-        }
     }
 }

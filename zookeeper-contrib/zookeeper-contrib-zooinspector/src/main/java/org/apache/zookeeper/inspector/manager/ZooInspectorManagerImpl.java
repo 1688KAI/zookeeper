@@ -20,12 +20,9 @@ package org.apache.zookeeper.inspector.manager;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -94,25 +91,16 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
      */
     public static final String AUTH_DATA_KEY = "authData";
 
-    private static final String DEFAULT_ENCRYPTION_MANAGER =
-        BasicDataEncryptionManager.class.getName();
-    private static final int DEFAULT_TIMEOUT = 5000;
-    private static final String DEFAULT_HOSTS = "localhost:2181";
-    private static final String DEFAULT_AUTH_SCHEME = "";
-    private static final String DEFAULT_AUTH_VALUE = "";
 
     private static final File defaultNodeViewersFile = new File(
             "./src/main/resources/defaultNodeViewers.cfg");
     private static final File defaultConnectionFile = new File(
             "./src/main/resources/defaultConnectionSettings.cfg");
 
-    //package visible for test
-    DataEncryptionManager encryptionManager;
+    private DataEncryptionManager encryptionManager;
     private String connectString;
     private int sessionTimeout;
-
-    //package visible for test
-    ZooKeeper zooKeeper;
+    private ZooKeeper zooKeeper;
     private final Map<String, NodeWatcher> watchers = new HashMap<String, NodeWatcher>();
     protected boolean connected = true;
     private Properties lastConnectionProps;
@@ -193,7 +181,7 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
             e.printStackTrace();
         }
         if (!connected){
-            disconnect();
+        	disconnect();
         } else {
             this.nodesCache = new NodesCache(zooKeeper);
         }
@@ -226,7 +214,7 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
      * getChildren(java.lang.String)
      */
     public List<String> getChildren(String nodePath) {
@@ -261,6 +249,46 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
             }
         }
         return null;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
+     * getNodeChild(java.lang.String, int)
+     */
+    public String getNodeChild(String nodePath, int childIndex) {
+        if (connected) {
+             return this.nodesCache.getNodeChild(nodePath, childIndex);
+        }
+        return null;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
+     * getNodeIndex(java.lang.String)
+     */
+    public int getNodeIndex(String nodePath) {
+        if (connected) {
+            int index = nodePath.lastIndexOf("/");
+            if (index == -1
+                    || (!nodePath.equals("/") && nodePath.charAt(nodePath
+                            .length() - 1) == '/')) {
+                throw new IllegalArgumentException("Invalid node path: "
+                        + nodePath);
+            }
+            String parentPath = nodePath.substring(0, index);
+            String child = nodePath.substring(index + 1);
+            if (parentPath != null && parentPath.length() > 0) {
+                List<String> children = this.nodesCache.getChildren(parentPath);
+                if (children != null) {
+                    return children.indexOf(child);
+                }
+            }
+        }
+        return -1;
     }
 
     /*
@@ -323,7 +351,11 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
                         returnACLs.add(aclMap);
                     }
                 }
-            } catch (InterruptedException | KeeperException e) {
+            } catch (InterruptedException e) {
+                LoggerFactory.getLogger().error(
+                        "Error occurred retrieving ACLs of node: " + nodePath,
+                        e);
+            } catch (KeeperException e) {
                 LoggerFactory.getLogger().error(
                         "Error occurred retrieving ACLs of node: " + nodePath,
                         e);
@@ -335,7 +367,7 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
      * getNodeMeta(java.lang.String)
      */
     public Map<String, String> getNodeMeta(String nodePath) {
@@ -374,11 +406,81 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
      * getNumChildren(java.lang.String)
      */
     public int getNumChildren(String nodePath) {
-        return connected ? getChildren(nodePath).size() : -1;
+        if (connected) {
+            try {
+                Stat s = zooKeeper.exists(nodePath, false);
+                if (s != null) {
+                    return s.getNumChildren();
+                }
+            } catch (Exception e) {
+                LoggerFactory.getLogger().error(
+                        "Error occurred getting the number of children of node: "
+                                + nodePath, e);
+            }
+        }
+        return -1;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
+     * hasChildren(java.lang.String)
+     */
+    public boolean hasChildren(String nodePath) {
+        return getNumChildren(nodePath) > 0;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
+     * isAllowsChildren(java.lang.String)
+     */
+    public boolean isAllowsChildren(String nodePath) {
+        if (connected) {
+            try {
+                Stat s = zooKeeper.exists(nodePath, false);
+                if (s != null) {
+                    return s.getEphemeralOwner() == 0;
+                }
+            } catch (Exception e) {
+                LoggerFactory.getLogger().error(
+                        "Error occurred determining whether node is allowed children: "
+                                + nodePath, e);
+            }
+        }
+        return false;
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorReadOnlyManager#
+     * getSessionMeta()
+     */
+    public Map<String, String> getSessionMeta() {
+        Map<String, String> sessionMeta = new LinkedHashMap<String, String>();
+        try {
+            if (zooKeeper != null) {
+
+                sessionMeta.put(SESSION_ID, String.valueOf(zooKeeper
+                        .getSessionId()));
+                sessionMeta.put(SESSION_STATE, String.valueOf(zooKeeper
+                        .getState().toString()));
+                sessionMeta.put(CONNECT_STRING, this.connectString);
+                sessionMeta.put(SESSION_TIMEOUT, String
+                        .valueOf(this.sessionTimeout));
+            }
+        } catch (Exception e) {
+            LoggerFactory.getLogger().error(
+                    "Error occurred retrieving session meta data.", e);
+        }
+        return sessionMeta;
     }
 
     /*
@@ -393,14 +495,7 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
             try {
                 String[] nodeElements = nodeName.split("/");
                 for (String nodeElement : nodeElements) {
-                    String node;
-                    //for case parent is "/" and maybe other cases
-                    if (parent.endsWith("/")) {
-                        node = parent + nodeElement;
-                    }
-                    else {
-                        node = parent + "/" + nodeElement;
-                    }
+                    String node = parent + "/" + nodeElement;
                     Stat s = zooKeeper.exists(node, false);
                     if (s == null) {
                         zooKeeper.create(node, this.encryptionManager
@@ -472,7 +567,7 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.zookeeper.inspector.manager.ZooInspectorManager#
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorManager#
      * getConnectionPropertiesTemplate()
      */
     public Pair<Map<String, List<String>>, Map<String, String>> getConnectionPropertiesTemplate() {
@@ -592,7 +687,7 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
                     }
                 } catch (Exception e) {
                     LoggerFactory.getLogger().error(
-                            "Error occurred re-adding node watcher for node "
+                            "Error occurred re-adding node watcherfor node "
                                     + nodePath, e);
                 }
                 nodeListener.processEvent(event.getPath(), event.getType()
@@ -600,6 +695,9 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
             }
         }
 
+        /**
+		 * 
+		 */
         public void stop() {
             this.closed = true;
         }
@@ -609,59 +707,67 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.zookeeper.inspector.manager.ZooInspectorManager#
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorManager#
      * loadNodeViewersFile(java.io.File)
      */
     public List<String> loadNodeViewersFile(File selectedFile)
             throws IOException {
         List<String> result = new ArrayList<String>();
-
-        try(BufferedReader reader = getReaderForFile(selectedFile)) {
-            if(reader == null) {
-                return result;
-            }
-
-            String line = "";
-            while (line != null) {
-                line = reader.readLine();
-                if(line != null) {
-                    line = line.trim();
-                    if (!line.isEmpty() && !line.startsWith("#")) {
-                        result.add(line);
+        if (defaultNodeViewersFile.exists()) {
+            FileReader reader = new FileReader(selectedFile);
+            try {
+                BufferedReader buff = new BufferedReader(reader);
+                try {
+                    while (buff.ready()) {
+                        String line = buff.readLine();
+                        if (line != null && line.length() > 0 && !line.startsWith("#")) {
+                            result.add(line);
+                        }
                     }
+                } finally {
+                    buff.close();
                 }
+            } finally {
+                reader.close();
             }
         }
-
         return result;
     }
 
     private void loadDefaultConnectionFile() throws IOException {
-        Properties props = new Properties();
+        if (defaultConnectionFile.exists()) {
+            Properties props = new Properties();
 
-        try(BufferedReader reader = getReaderForFile(defaultConnectionFile)) {
-            //If reader is null, it's OK.  Default values will get set below.
-            if(reader != null) {
+            FileReader reader = new FileReader(defaultConnectionFile);
+            try {
                 props.load(reader);
+            } finally {
+                reader.close();
             }
+            defaultEncryptionManager = props
+                    .getProperty(DATA_ENCRYPTION_MANAGER) == null ? "org.apache.zookeeper.inspector.encryption.BasicDataEncryptionManager"
+                    : props.getProperty(DATA_ENCRYPTION_MANAGER);
+            defaultTimeout = props.getProperty(SESSION_TIMEOUT) == null ? "5000"
+                    : props.getProperty(SESSION_TIMEOUT);
+            defaultHosts = props.getProperty(CONNECT_STRING) == null ? "localhost:2181"
+                    : props.getProperty(CONNECT_STRING);
+            defaultAuthScheme = props.getProperty(AUTH_SCHEME_KEY) == null ? ""
+                    : props.getProperty(AUTH_SCHEME_KEY);
+            defaultAuthValue = props.getProperty(AUTH_DATA_KEY) == null ? ""
+                    : props.getProperty(AUTH_DATA_KEY);
+        } else {
+            defaultEncryptionManager = "org.apache.zookeeper.inspector.encryption.BasicDataEncryptionManager";
+            defaultTimeout = "5000";
+            defaultHosts = "localhost:2181";
+            defaultAuthScheme = "";
+            defaultAuthValue = "";
         }
-
-        defaultEncryptionManager = props.getProperty(DATA_ENCRYPTION_MANAGER) == null ?
-            DEFAULT_ENCRYPTION_MANAGER : props.getProperty(DATA_ENCRYPTION_MANAGER);
-        defaultTimeout = props.getProperty(SESSION_TIMEOUT) == null ?
-            Integer.toString(DEFAULT_TIMEOUT) : props.getProperty(SESSION_TIMEOUT);
-        defaultHosts = props.getProperty(CONNECT_STRING) == null ?
-            DEFAULT_HOSTS : props.getProperty(CONNECT_STRING);
-        defaultAuthScheme = props.getProperty(AUTH_SCHEME_KEY) == null ?
-            DEFAULT_AUTH_SCHEME : props.getProperty(AUTH_SCHEME_KEY);
-        defaultAuthValue = props.getProperty(AUTH_DATA_KEY) == null ?
-            DEFAULT_AUTH_VALUE : props.getProperty(AUTH_DATA_KEY);
     }
 
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.zookeeper.inspector.manager.ZooInspectorManager#
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorManager#
      * saveDefaultConnectionFile(java.util.Properties)
      */
     public void saveDefaultConnectionFile(Properties props) throws IOException {
@@ -691,7 +797,7 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.zookeeper.inspector.manager.ZooInspectorManager#
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorManager#
      * saveNodeViewersFile(java.io.File, java.util.List)
      */
     public void saveNodeViewersFile(File selectedFile,
@@ -723,7 +829,7 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.zookeeper.inspector.manager.ZooInspectorManager#
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorManager#
      * setDefaultNodeViewerConfiguration(java.io.File, java.util.List)
      */
     public void setDefaultNodeViewerConfiguration(
@@ -750,7 +856,7 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
     /*
      * (non-Javadoc)
      * 
-     * @see org.apache.zookeeper.inspector.manager.ZooInspectorManager#
+     * @seeorg.apache.zookeeper.inspector.manager.ZooInspectorManager#
      * getLastConnectionProps()
      */
     public Properties getLastConnectionProps() {
@@ -765,27 +871,5 @@ public class ZooInspectorManagerImpl implements ZooInspectorManager {
      */
     public void setLastConnectionProps(Properties connectionProps) {
         this.lastConnectionProps = connectionProps;
-    }
-
-    private static BufferedReader getReaderForFile(File file) {
-        //check the filesystem first
-        if (file.exists()) {
-            try {
-                return new BufferedReader(new FileReader(file));
-            } catch (FileNotFoundException e) {
-                return null;
-            }
-        }
-
-        //fall back to checking the CLASSPATH with only the filename
-        //(for cases where the file exists in src/main/resources)
-        InputStream classpathStream = ZooInspectorManagerImpl.class.getClassLoader()
-            .getResourceAsStream(file.getName());
-        if (classpathStream != null) {
-            return new BufferedReader(new InputStreamReader(classpathStream));
-        }
-
-        //couldn't find the file anywhere
-        return null;
     }
 }

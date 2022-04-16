@@ -30,9 +30,6 @@ public class BasicDataEncryptionManager implements DataEncryptionManager {
      * (byte[])
      */
     public String decryptData(byte[] encrypted) throws Exception {
-        if(encrypted == null) {
-            return "";
-        }
         return new String(encrypted);
     }
 

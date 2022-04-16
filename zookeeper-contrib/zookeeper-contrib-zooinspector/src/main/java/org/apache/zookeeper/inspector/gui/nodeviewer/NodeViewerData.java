@@ -60,7 +60,7 @@ public class NodeViewerData extends ZooInspectorNodeViewer {
             public void actionPerformed(ActionEvent e) {
                 if (selectedNode != null) {
                     if (JOptionPane.showConfirmDialog(NodeViewerData.this,
-                            "Are you sure you want to save the node '" + selectedNode + "'?\n"
+                            "Are you sure you want to save this node?"
                                     + " (this action cannot be reverted)",
                             "Confirm Save", JOptionPane.YES_NO_OPTION,
                             JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
@@ -110,7 +110,11 @@ public class NodeViewerData extends ZooInspectorNodeViewer {
                     String data = "";
                     try {
                         data = get();
-                    } catch (InterruptedException | ExecutionException e) {
+                    } catch (InterruptedException e) {
+                        LoggerFactory.getLogger().error(
+                                "Error retrieving data for node: "
+                                        + NodeViewerData.this.selectedNode, e);
+                    } catch (ExecutionException e) {
                         LoggerFactory.getLogger().error(
                                 "Error retrieving data for node: "
                                         + NodeViewerData.this.selectedNode, e);

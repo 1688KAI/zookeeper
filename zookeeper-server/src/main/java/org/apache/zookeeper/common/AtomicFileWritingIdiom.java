@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.zookeeper.common;
 
 import java.io.BufferedWriter;
@@ -27,39 +26,36 @@ import java.io.Writer;
 
 /*
  *  Used to perform an atomic write into a file.
- *  If there is a failure in the middle of the writing operation,
+ *  If there is a failure in the middle of the writing operation, 
  *  the original file (if it exists) is left intact.
  *  Based on the org.apache.zookeeper.server.quorum.QuorumPeer.writeLongToFile(...) idiom
  *  using the HDFS AtomicFileOutputStream class.
  */
 public class AtomicFileWritingIdiom {
 
-    public interface OutputStreamStatement {
+    public static interface OutputStreamStatement {
 
-        void write(OutputStream os) throws IOException;
-
-    }
-
-    public interface WriterStatement {
-
-        void write(Writer os) throws IOException;
+        public void write(OutputStream os) throws IOException;
 
     }
 
-    public AtomicFileWritingIdiom(File targetFile, OutputStreamStatement osStmt) throws IOException {
+    public static interface WriterStatement {
+
+        public void write(Writer os) throws IOException;
+
+    }
+
+    public AtomicFileWritingIdiom(File targetFile, OutputStreamStatement osStmt)  throws IOException {
         this(targetFile, osStmt, null);
     }
 
-    public AtomicFileWritingIdiom(File targetFile, WriterStatement wStmt) throws IOException {
+    public AtomicFileWritingIdiom(File targetFile, WriterStatement wStmt)  throws IOException {
         this(targetFile, null, wStmt);
     }
 
-    private AtomicFileWritingIdiom(
-        File targetFile,
-        OutputStreamStatement osStmt,
-        WriterStatement wStmt) throws IOException {
+    private AtomicFileWritingIdiom(File targetFile, OutputStreamStatement osStmt, WriterStatement wStmt)  throws IOException {
         AtomicFileOutputStream out = null;
-        boolean triedToClose = false;
+        boolean error = true;
         try {
             out = new AtomicFileOutputStream(targetFile);
             if (wStmt == null) {
@@ -71,18 +67,20 @@ public class AtomicFileWritingIdiom {
                 wStmt.write(bw);
                 bw.flush();
             }
-            triedToClose = true;
-            // close() will do the best to clean up file/resources in case of errors
-            // worst case the tmp file may still exist
-            out.close();
+            out.flush();
             // everything went ok
+            error = false;
         } finally {
             // nothing interesting to do if out == null
             if (out != null) {
-                if (!triedToClose) {
+                if (error) {
                     // worst case here the tmp file/resources(fd) are not cleaned up
                     // and the caller will be notified (IOException)
                     out.abort();
+                } else {
+                    // if the close operation (rename) fails we'll get notified.
+                    // worst case the tmp file may still exist
+                    IOUtils.closeStream(out);
                 }
             }
         }

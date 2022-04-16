@@ -1,5 +1,5 @@
 <!--
-Copyright 2002-2022 The Apache Software Foundation
+Copyright 2002-2004 The Apache Software Foundation
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -101,12 +101,12 @@ ZooKeeper:
     bin/zkServer.sh start
 
 
-ZooKeeper logs messages using _logback_ -- more detail
+ZooKeeper logs messages using log4j -- more detail
 available in the
 [Logging](zookeeperProgrammers.html#Logging)
 section of the Programmer's Guide. You will see log messages
 coming to the console (default) and/or a log file depending on
-the logback configuration.
+the log4j configuration.
 
 The steps outlined here run ZooKeeper in standalone mode. There is
 no replication, so if ZooKeeper process fails, the service will go down.
@@ -137,7 +137,8 @@ Once you have connected, you should see something like:
 
 
     Connecting to localhost:2181
-    ...
+    log4j:WARN No appenders could be found for logger (org.apache.zookeeper.ZooKeeper).
+    log4j:WARN Please initialize the log4j system properly.
     Welcome to ZooKeeper!
     JLine support is enabled
     [zkshell: 0]
@@ -146,34 +147,25 @@ From the shell, type `help` to get a listing of commands that can be executed fr
 
 
     [zkshell: 0] help
-    ZooKeeper -server host:port cmd args
-	addauth scheme auth
-	close
-	config [-c] [-w] [-s]
-	connect host:port
-	create [-s] [-e] [-c] [-t ttl] path [data] [acl]
-	delete [-v version] path
-	deleteall path
-	delquota [-n|-b] path
-	get [-s] [-w] path
-	getAcl [-s] path
-	getAllChildrenNumber path
-	getEphemerals path
-	history
-	listquota path
-	ls [-s] [-w] [-R] path
-	ls2 path [watch]
-	printwatches on|off
-	quit
-	reconfig [-s] [-v version] [[-file path] | [-members serverID=host:port1:port2;port3[,...]*]] | [-add serverId=host:port1:port2;port3[,...]]* [-remove serverId[,...]*]
-	redo cmdno
-	removewatches path [-c|-d|-a] [-l]
-	rmr path
-	set [-s] [-v version] path data
-	setAcl [-s] [-v version] [-R] path acl
-	setquota -n|-b val path
-	stat [-w] path
-	sync path
+    ZooKeeper host:port cmd args
+        get path [watch]
+        ls path [watch]
+        set path data [version]
+        delquota [-n|-b] path
+        quit
+        printwatches on|off
+        create path data acl
+        stat path [watch]
+        listquota path
+        history
+        setAcl path acl
+        getAcl path
+        sync path
+        redo cmdno
+        addauth scheme auth
+        delete path [version]
+        deleteall path
+        setquota -n|-b val path
 
 
 From here, you can try a few simple commands to get a feel for this simple command line interface.  First, start by issuing the list command, as
@@ -260,7 +252,7 @@ Finally, let's `delete` the node by issuing:
     [zkshell: 18]
 
 
-That's it for now. To explore more, see the [Zookeeper CLI](zookeeperCLI.html).
+That's it for now.  To explore more, continue with the rest of this document and see the [Programmer's Guide](zookeeperProgrammers.html).
 
 <a name="sc_ProgrammingToZooKeeper"></a>
 
@@ -271,7 +263,7 @@ functionally equivalent. The C bindings exist in two variants: single
 threaded and multi-threaded. These differ only in how the messaging loop
 is done. For more information, see the [Programming
 Examples in the ZooKeeper Programmer's Guide](zookeeperProgrammers.html#ch_programStructureWithExample) for
-sample code using the different APIs.
+sample code using of the different APIs.
 
 <a name="sc_RunningReplicatedZooKeeper"></a>
 
@@ -289,7 +281,7 @@ file.
 and it is strongly recommended that you have an odd number of
 servers. If you only have two servers, then you are in a
 situation where if one of them fails, there are not enough
-machines to form a majority quorum. Two servers are inherently
+machines to form a majority quorum. Two servers is inherently
 **less** stable than a single server, because there are two single
 points of failure.
 
@@ -314,7 +306,7 @@ be from a leader.
 
 With both of these timeouts, you specify the unit of time using
 **tickTime**. In this example, the timeout
-for initLimit is 5 ticks at 2000 milliseconds a tick, or 10
+for initLimit is 5 ticks at 2000 milleseconds a tick, or 10
 seconds.
 
 The entries of the form _server.X_ list the
@@ -353,11 +345,6 @@ servers would be offline. Full redundancy requires that each
 server have its own machine. It must be a completely separate
 physical server. Multiple virtual machines on the same physical
 host are still vulnerable to the complete failure of that host.
-
->If you have multiple network interfaces in your ZooKeeper machines,
-you can also instruct ZooKeeper to bind on all of your interfaces and
-automatically switch to a healthy interface in case of a network failure.
-For details, see the [Configuration Parameters](zookeeperAdmin.html#id_multi_address).
 
 <a name="other-optimizations"></a>
 

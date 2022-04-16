@@ -33,7 +33,7 @@ TestClientId testClientId;
 const char* TestClientId::PASSWD="1234567890123456";
 
 HandshakeRequest* HandshakeRequest::parse(const std::string& buf) {
-    unique_ptr<HandshakeRequest> req(new HandshakeRequest);
+    auto_ptr<HandshakeRequest> req(new HandshakeRequest);
 
     memcpy(&req->protocolVersion,buf.data(), sizeof(req->protocolVersion));
     req->protocolVersion = htonl(req->protocolVersion);
@@ -344,11 +344,9 @@ string HandshakeResponse::toString() const {
     tmp=htonl(passwd_len);
     buf.append((char*)&tmp,sizeof(tmp));
     buf.append(passwd,sizeof(passwd));
-    if (!omitReadOnly) {
-        buf.append(&readOnly,sizeof(readOnly));
-    }
+    buf.append(&readOnly,sizeof(readOnly));
     // finally set the buffer length
-    tmp=htonl(buf.size());
+    tmp=htonl(buf.size()+sizeof(tmp));
     buf.insert(0,(char*)&tmp, sizeof(tmp));
     return buf;
 }
@@ -482,7 +480,7 @@ void ZookeeperServer::onMessageReceived(const RequestHeader& rh, iarchive* ia){
 void ZookeeperServer::notifyBufferSent(const std::string& buffer){
     if(HandshakeRequest::isValid(buffer)){
         // could be a connect request
-        unique_ptr<HandshakeRequest> req(HandshakeRequest::parse(buffer));
+        auto_ptr<HandshakeRequest> req(HandshakeRequest::parse(buffer));
         if(req.get()!=0){
             // handle the handshake
             int64_t sessId=sessionExpired?req->sessionId+1:req->sessionId;
@@ -525,24 +523,19 @@ void ZookeeperServer::notifyBufferSent(const std::string& buffer){
     addRecvResponse(e);
 }
 
-void forceConnected(zhandle_t* zh, const struct timeval *last_recv_send){
+void forceConnected(zhandle_t* zh){
     // simulate connected state
     zh->state=ZOO_CONNECTED_STATE;
 
     // Simulate we're connected to the first host in our host list
-    zh->fd->sock=ZookeeperServer::FD;
+    zh->fd=ZookeeperServer::FD;
     assert(zh->addrs.count > 0);
     zh->addr_cur = zh->addrs.data[0];
     zh->addrs.next++;
 
     zh->input_buffer=0;
-    if (last_recv_send) {
-        zh->last_recv = *last_recv_send;
-        zh->last_send = *last_recv_send;
-    } else {
-        gettimeofday(&zh->last_recv,0);
-        gettimeofday(&zh->last_send,0);
-    }
+    gettimeofday(&zh->last_recv,0);
+    gettimeofday(&zh->last_send,0);
 }
 
 void terminateZookeeperThreads(zhandle_t* zh){
